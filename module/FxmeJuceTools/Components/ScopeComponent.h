@@ -17,8 +17,6 @@
   ==============================================================================
 */
 
-#pragma once
-
 // JUCEライブラリのヘッダーをインクルードする。
 #include <array>
 
@@ -63,7 +61,7 @@ public:
 
 		if (size1 > 0) {
 			// 浮動小数点型(floatまたはdouble)の配列要素をコピーする処理。内部ではmemcpy関数が実行される。
-			FloatVectorOperations::copy(buffers[(size_t)start1].data(), dataToPush, (int)jmin(bufferSize, numSamples));
+			juce::FloatVectorOperations::copy(buffers[(size_t)start1].data(), dataToPush, (int)juce::jmin(bufferSize, numSamples));
 		}
 
 		// FIFO方式でのコンテナ要素の追加操作を行った後の終了処理。
@@ -88,7 +86,7 @@ public:
 
 		if (size1 > 0) {
 			// 浮動小数点型(floatまたはdouble)の配列要素をコピーする処理。内部ではmemcpy関数が実行される。
-			FloatVectorOperations::copy(outputBuffer, buffers[(size_t)start1].data(), (int)bufferSize);
+			juce::FloatVectorOperations::copy(outputBuffer, buffers[(size_t)start1].data(), (int)bufferSize);
 		}
 
 		// FIFO方式でのコンテナ要素の読み込み操作を行った後の終了処理。
@@ -103,7 +101,7 @@ private:
 
 	// FIFO方式のアルゴリズムを提供するjuce::AbstractFifoクラスのインスタンス。
 	// コンストラクタの引数としてFIFO方式で操作するコンテナの要素数を渡す。
-	AbstractFifo abstractFifo{ numBuffers };
+	juce::AbstractFifo abstractFifo{ numBuffers };
 
 };
 
@@ -222,10 +220,10 @@ public:
 
 	// ④Function to draw the state of the SCOPE panel.
 	// Executes the process of filling the panel area and plotting the waveform.
-	void paint(Graphics& g) override
+	void paint(juce::Graphics& g) override
 	{
 		// ④-B. Identify the rectangular area to draw the waveform.
-		Rectangle<int> drawArea = getLocalBounds();
+		juce::Rectangle<int> drawArea = getLocalBounds();
 
 		// ④-B. Fill the background of the rectangular area where the waveform will be drawn in gray.
 		g.setColour(backgroundColour);
@@ -236,7 +234,7 @@ public:
 		SampleType drawY = (SampleType)drawArea.getY();
 		SampleType drawH = (SampleType)drawArea.getHeight();
 		SampleType drawW = (SampleType)drawArea.getWidth();
-		Rectangle<SampleType> scopeRect = Rectangle<SampleType>{ drawX, drawY, drawW, drawH };
+		juce::Rectangle<SampleType> scopeRect = juce::Rectangle<SampleType>{ drawX, drawY, drawW, drawH };
 
 		// ④-B. プロットする波形の色を設定する。
 		g.setColour(lineColour);
@@ -263,7 +261,7 @@ private:
 	// 第5引数...Y方向での波形大きさを調整する値、第6引数...矩形領域の底部を基準としてY方向に波形をずらすオフセット値
 	static void plot(const SampleType* data
 		, size_t numSamples
-		, Graphics& g
+		, juce::Graphics& g
 		, juce::Rectangle<SampleType> rect
 		, SampleType scaler = SampleType(1)
 		, SampleType offset = SampleType(0))
@@ -280,10 +278,10 @@ private:
 		for (size_t i = 1; i < numSamples; ++i)
 		{
 			// juce::jmap関数によってサンプルデータ配列の要素数と矩形領域内のX座標とをマッピングし、要素ごとのX座標を算出する。
-			const float x1 = jmap(SampleType(i - 1), SampleType(0), SampleType(numSamples - 1), SampleType(right - w), SampleType(right));
-			const float y1 = alignedCentre - gain * jmax(SampleType(-1.0), jmin(SampleType(1.0), data[i - 1] ));
-			const float x2 = jmap(SampleType(i), SampleType(0), SampleType(numSamples - 1), SampleType(right - w), SampleType(right));
-			const float y2 = alignedCentre - gain * jmax(SampleType(-1.0), jmin(SampleType(1.0), data[i]));
+			const float x1 = juce::jmap(SampleType(i - 1), SampleType(0), SampleType(numSamples - 1), SampleType(right - w), SampleType(right));
+			const float y1 = alignedCentre - gain * juce::jmax(SampleType(-1.0), juce::jmin(SampleType(1.0), data[i - 1] ));
+			const float x2 = juce::jmap(SampleType(i), SampleType(0), SampleType(numSamples - 1), SampleType(right - w), SampleType(right));
+			const float y2 = alignedCentre - gain * juce::jmax(SampleType(-1.0), juce::jmin(SampleType(1.0), data[i]));
 			//const float t = scopeLineWidth;
 			g.drawLine(x1, y1, x2, y2, 1.f);
 		}

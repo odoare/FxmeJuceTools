@@ -1,0 +1,53 @@
+//===========================================================
+//
+// FX-Mechanics gui elements
+//
+// ==========================================================
+
+class FxmeKnob
+{
+public:
+
+    FxmeKnob(juce::AudioProcessorValueTreeState& apvts, juce::String paramName, juce::Colour knobColor)
+    {
+        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow,true,80,15);
+        slider.setTextBoxIsEditable(true);
+        slider.setColour(juce::Slider::thumbColourId, knobColor);
+        slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::black);
+        slider.setColour(juce::Slider::trackColourId, knobColor);
+        slider.setColour(juce::Slider::backgroundColourId, juce::Colours::transparentBlack);
+        slider.setColour(juce::Slider::rotarySliderOutlineColourId, knobColor.darker(2.f));
+        textLabel.setJustificationType(juce::Justification::centred);
+        textLabel.attachToComponent(&slider,false);
+        textLabel.setText(paramName,juce::NotificationType::sendNotification);
+        attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,paramName,slider);
+        setFlex();
+    }
+
+    ~FxmeKnob()
+    {
+    }
+
+    juce::FlexBox& flex()
+    {
+        return flexBox;
+    }
+
+    juce::Slider slider;
+    juce::Label valueLabel, textLabel;
+    juce::FlexBox flexBox;
+
+private:
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
+
+    void setFlex()
+    {
+        flexBox.flexDirection = juce::FlexBox::Direction::column;
+        flexBox.items.add(juce::FlexItem(textLabel).withFlex(0.2f));
+        flexBox.items.add(juce::FlexItem(slider).withFlex(1.f));
+    }
+
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FxmeKnob)
+
+};

@@ -8,11 +8,6 @@
   ==============================================================================
 */
 
-#pragma once
-
-#include <JuceHeader.h>
-#include <iostream>
-
 class VerticalMeter : public juce::Component, public juce::Timer
 {
 public:
@@ -173,7 +168,7 @@ public:
     auto w = bounds.getWidth();
     auto x = bounds.getTopLeft().getX();
     auto xvu = x + w*0.2f;
-    const auto valWidth = juce::jmap(level,minVal, maxVal, 0.0f, w*0.2f);
+    const auto valWidth = juce::jmap(level,minVal, maxVal, 0.0f, w*0.8f);
 
     auto valBounds = bounds;
     valBounds.setLeft(xvu);
