@@ -16,11 +16,13 @@ BEGIN_JUCE_MODULE_DECLARATION
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_dsp/juce_dsp.h>
 
 namespace fxme
 {
   #include "Components/FxmeMeters.h"
   #include "Components/ScopeComponent.h"
+  #include "Components/SpectrogramComponent.h"
   #include "Components/FxmeKnob.h"
   #include "Components/FxmeButton.h"
   #include "LookAndFeels/FxmeLookAndFeel.h"
