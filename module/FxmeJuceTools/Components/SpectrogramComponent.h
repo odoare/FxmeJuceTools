@@ -1,7 +1,24 @@
+/*
+--------------------------------------------------------------
+
+SpectrogramComponent.h
+
+This file is part of the FxmeJuceTools module for JUCE
+O. Doaré - 2025
+
+github.com/odoare/FxmeJuceTools
+
+This spectrogram component was inspired by the JUCE tutorial :
+https://juce.com/tutorials/tutorial_simple_fft/
+
+--------------------------------------------------------------
+*/
+
 #pragma once
 #define FFTORDER 11
 
 #include <JuceHeader.h>
+#include <juce_dsp/juce_dsp.h>
 #include <array>
 
 class SpectrogramFifo
@@ -47,7 +64,7 @@ public:
     };
 
     bool nextFFTBlockReady = false;
-    static constexpr auto fftSize = 1 << FFTORDER; // 1024
+    static constexpr auto fftSize = 1 << FFTORDER;
     std::array<float, fftSize> fifo;
     int fifoIndex = 0;
     std::array<float, fftSize * 2> fftData;
@@ -97,6 +114,35 @@ public:
         }
     };
 
+    void setContrast(float newContrast)
+    {
+        contrast = juce::jlimit(0.1f, 2.0f, newContrast);
+    }
+
+    void mouseDrag(const juce::MouseEvent& e)
+    {
+        // if is is a mouseClick event, we check if it is a double click (doesn't work)
+        // if (e.mouseWasClicked())
+        // {
+        //     std::cout << "SpectrogramComponent: Mouse clicked at position: " << e.position.toString() << std::endl;
+        //     if (e.getNumberOfClicks() > 1)
+        //     {
+        //         // reset the hue and contrast to default values
+        //         hueColour = 0.5f;
+        //         contrast = 1.0f;
+        //         repaint();
+        //         std::cout << "SpectrogramComponent: Reset hue and contrast to default values." << std::endl;
+        //         return;
+        //     }
+        // }
+        // Adjust the contrast based on mouse position
+        float changeVal = 0.0;
+        if(e.getDistanceFromDragStartY() < 0) changeVal = -0.005f; //up
+        if(e.getDistanceFromDragStartY() > 0) changeVal = +0.005f; //down
+        setContrast(contrast+changeVal);
+
+    }
+
     void drawNextLineOfSpectrogram()
     {
         auto rightHandEdge = spectrogramImage.getWidth() - 1;
@@ -118,7 +164,7 @@ public:
         {
             auto skewedProportionY = 1.0f - std::exp (std::log ((float) y / (float) imageHeight) * 0.2f);
             auto fftDataIndex = (size_t) juce::jlimit (0, fftSize / 2, (int) (skewedProportionY * fftSize / 2));
-            auto level = juce::jmap (spectrogramFifo->fftData[fftDataIndex], 0.0f, juce::jmax (maxLevel.getEnd(), 1e-5f), 0.0f, 1.0f);
+            auto level = pow(juce::jmap (spectrogramFifo->fftData[fftDataIndex], 0.0f, juce::jmax (maxLevel.getEnd(), 1e-5f), 0.0f, 1.0f),contrast);
             //auto level = juce::jmap (spectrogramFifo->fftData[fftDataIndex], 0.f, 1.f, 0.f, 1.0f);
             
             //bitmap.setPixelColour (0, y, juce::Colour::fromHSV (level, 1.0f, level, 1.0f)); // [6]
@@ -134,6 +180,7 @@ private:
     SpectrogramFifo* spectrogramFifo;
     juce::dsp::FFT forwardFFT;
     float hueColour;
+    float contrast = 1.0f; // Typically between 0.1 and 2.0
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpectrogramComponent)
 };
