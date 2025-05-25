@@ -1,5 +1,8 @@
-#define FFTORDER 11
 #pragma once
+#define FFTORDER 11
+
+#include <JuceHeader.h>
+#include <array>
 
 class SpectrogramFifo
 {
@@ -9,10 +12,9 @@ public:
     {
         std::fill (fifo.begin(), fifo.end(), 0.0f);
         std::fill (fftData.begin(), fftData.end(), 0.0f);
-    }
-    ~SpectrogramFifo()
-    {
-    }
+    };
+
+    ~SpectrogramFifo(){};
 
     void fillFifoWithBlock (const juce::AudioBuffer<float>& buffer)
     {
@@ -23,7 +25,7 @@ public:
             for (auto i = 0; i < buffer.getNumSamples(); ++i)
                 pushNextSampleIntoFifo (channelData[i]);
         }
-    }
+    };
 
     void pushNextSampleIntoFifo (float sample) noexcept
     {
@@ -42,14 +44,13 @@ public:
         }
 
         fifo[(size_t) fifoIndex++] = sample;
-    }
+    };
 
     bool nextFFTBlockReady = false;
     static constexpr auto fftSize = 1 << FFTORDER; // 1024
     std::array<float, fftSize> fifo;
     int fifoIndex = 0;
     std::array<float, fftSize * 2> fftData;
-
 
 private:
 
@@ -61,13 +62,16 @@ JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpectrogramFifo)
 class SpectrogramComponent : public juce::Component, private juce::Timer
 {
 public:
-    SpectrogramComponent(SpectrogramFifo* fifo)
-        : forwardFFT (FFTORDER),
-          spectrogramImage (juce::Image::RGB, 128, 512, true)
+    SpectrogramComponent(SpectrogramFifo* fifo,
+        int xsize = 128,
+        int ysize = 512,
+        float hue = 0.5f)    : forwardFFT (FFTORDER),
+        spectrogramImage (juce::Image::RGB, xsize, ysize, true)
     {
         spectrogramFifo = fifo;
+        hueColour = hue;
         startTimerHz (60);
-    }
+    };
 
     // ~SpectrogramComponent() override
     // {
@@ -77,11 +81,11 @@ public:
     //==============================================================================
     void paint (juce::Graphics& g) override
     {
-		//juce::Rectangle<int> drawArea = getLocalBounds();
-		//g.setColour(juce::Colours::black);
-		g.fillRoundedRectangle(getLocalBounds().toFloat(),10.f);
+        //juce::Rectangle<int> drawArea = getLocalBounds();
+        //g.setColour(juce::Colours::black);
+        g.fillRoundedRectangle(getLocalBounds().toFloat(),10.f);
         g.drawImage (spectrogramImage, getLocalBounds().reduced(5.f).toFloat());
-    }
+    };
 
     void timerCallback() override
     {
@@ -91,7 +95,7 @@ public:
             spectrogramFifo->nextFFTBlockReady = false;
             repaint();
         }
-    }
+    };
 
     void drawNextLineOfSpectrogram()
     {
@@ -114,13 +118,13 @@ public:
         {
             auto skewedProportionY = 1.0f - std::exp (std::log ((float) y / (float) imageHeight) * 0.2f);
             auto fftDataIndex = (size_t) juce::jlimit (0, fftSize / 2, (int) (skewedProportionY * fftSize / 2));
-            //auto level = juce::jmap (spectrogramFifo->fftData[fftDataIndex], 0.0f, juce::jmax (maxLevel.getEnd(), 1e-5f), 0.0f, 1.0f);
-            auto level = juce::jmap (spectrogramFifo->fftData[fftDataIndex], 0.f, 1.f, 0.f, 1.0f);
+            auto level = juce::jmap (spectrogramFifo->fftData[fftDataIndex], 0.0f, juce::jmax (maxLevel.getEnd(), 1e-5f), 0.0f, 1.0f);
+            //auto level = juce::jmap (spectrogramFifo->fftData[fftDataIndex], 0.f, 1.f, 0.f, 1.0f);
             
             //bitmap.setPixelColour (0, y, juce::Colour::fromHSV (level, 1.0f, level, 1.0f)); // [6]
-            bitmap.setPixelColour (0, y, juce::Colour::fromHSV (.3f, 0.5f, level, 1.f)); // [6]
+            bitmap.setPixelColour (0, y, juce::Colour::fromHSV (hueColour, 0.5f, level, 1.f)); // [6]
         }
-    }
+    };
 
     //static constexpr auto fftOrder = 10;                // [1]
     static constexpr auto fftSize  = 1 << FFTORDER;     // [2]
@@ -129,6 +133,7 @@ public:
 private:
     SpectrogramFifo* spectrogramFifo;
     juce::dsp::FFT forwardFFT;
+    float hueColour;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpectrogramComponent)
 };
