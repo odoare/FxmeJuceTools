@@ -83,11 +83,11 @@ public:
     SpectrogramComponent(SpectrogramFifo* fifo,
         int xsize = 128,
         int ysize = 512,
-        float hue = 0.5f)    : forwardFFT (FFTORDER),
-        spectrogramImage (juce::Image::RGB, xsize, ysize, true)
+        juce::Colour col = juce::Colours::green)
+        : forwardFFT (FFTORDER), spectrogramImage (juce::Image::RGB, xsize, ysize, true)
     {
         spectrogramFifo = fifo;
-        hueColour = hue;
+        colour = col;
         startTimerHz (FPS);
     };
 
@@ -169,7 +169,7 @@ public:
             //auto level = juce::jmap (spectrogramFifo->fftData[fftDataIndex], 0.f, 1.f, 0.f, 1.0f);
             
             //bitmap.setPixelColour (0, y, juce::Colour::fromHSV (level, 1.0f, level, 1.0f)); // [6]
-            bitmap.setPixelColour (0, y, juce::Colour::fromHSV (hueColour, 0.5f, level, 1.f)); // [6]
+            bitmap.setPixelColour (0, y, colour.withBrightness(level));
         }
     };
 
@@ -181,6 +181,7 @@ private:
     SpectrogramFifo* spectrogramFifo;
     juce::dsp::FFT forwardFFT;
     float hueColour;
+    juce::Colour colour = juce::Colours::green;
     float contrast = 1.0f; // Typically between 0.1 and 2.0
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpectrogramComponent)
