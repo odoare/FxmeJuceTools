@@ -20,7 +20,7 @@
 // JUCEライブラリのヘッダーをインクルードする。
 #include <array>
 
-#define FPS 22
+#define FPS 30
 #define ORDER 11
 
 //==============================================================================
@@ -209,6 +209,7 @@ public:
 		scopeLineWidth = width;
 		sampleData.fill(SampleType(0));
 		setFramePerSecond(FPS);
+		addMouseListener(this, true); // Enable mouse drag events
 	}
 
 	// ③ A function that sets the time interval for updating the waveform plot.
@@ -247,6 +248,15 @@ public:
 
 	void resized() override {}
 
+	void mouseDrag(const juce::MouseEvent& e)
+    {
+        float changeVal = 0.0;
+        if(e.getDistanceFromDragStartY() < 0) changeVal = +0.1f; //up
+        if(e.getDistanceFromDragStartY() > 0) changeVal = -0.1f; //down
+        setDisplayGain(displayGain+changeVal);
+
+    }
+
 private:
 	// ⑤juce::Timerクラスのスレッドから呼び出されるコールバック関数。
 	void timerCallback() override
@@ -259,7 +269,7 @@ private:
 	// 第1引数...プロットするサンプルデータ配列、第2引数...データ配列の要素数
 	// 第3引数...グラフィックコンテキストの参照、第4引数...波形プロット結果を描画する矩形領域
 	// 第5引数...Y方向での波形大きさを調整する値、第6引数...矩形領域の底部を基準としてY方向に波形をずらすオフセット値
-	static void plot(const SampleType* data
+	void plot(const SampleType* data
 		, size_t numSamples
 		, juce::Graphics& g
 		, juce::Rectangle<SampleType> rect
@@ -270,7 +280,7 @@ private:
 		auto h = rect.getHeight();								// 波形プロットを描画する矩形領域の高さサイズを取得する。
 		auto right = rect.getRight();							// 波形プロットを描画する矩形領域の右辺の座標を取得する。
 		auto alignedCentre = rect.getBottom() - offset;			// 波形プロットのY軸を配置する座標を保持する。
-		auto gain = h * scaler;									// 波形プロットのY方向のゲイン量を保持する。
+		auto gain = displayGain * h * scaler;									// 波形プロットのY方向のゲイン量を保持する。
 
 
 		// 隣り合うサンプルデータ間の直線を描画する。
@@ -287,12 +297,18 @@ private:
 		}
 	}
 
+	void setDisplayGain(float gain)
+	{
+		displayGain = juce::jlimit(1.f, 10.0f, gain);
+	}
+
 	// ⑦メンバ変数を宣言する。
 	Queue& audioBufferQueue;										// AudioBufferQueueクラスの参照を保持する変数
 	std::array<SampleType, Queue::bufferSize> sampleData;			// プロットするサンプルデータを格納する配列コンテナ
 
 	juce::Colour lineColour, backgroundColour;
 	float scopeRoundRadius, scopeLineWidth;
+	SampleType displayGain = 1.0;	// Gain value for displaying the waveform, typically between 1 and 10
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScopeComponent)
 };
