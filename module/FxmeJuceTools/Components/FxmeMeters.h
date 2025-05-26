@@ -154,7 +154,7 @@ public:
                         : valueSupplier(std::move(valueFunction))
   {
     startTimerHz(30);
-    valueColour = juce::Colours::white;
+    valueColour = juce::Colours::green;
     backgroundColour = juce::Colours::black;
     setMinVal(0.f);
     setMaxVal(100.f);
