@@ -8,6 +8,8 @@
   ==============================================================================
 */
 
+#include <JuceHeader.h>
+
 class VerticalMeter : public juce::Component, public juce::Timer
 {
 public:
@@ -150,14 +152,21 @@ private:
 class FxmeHorizontalMeter : public juce::Component, public juce::Timer
 {
 public:
-  FxmeHorizontalMeter(std::function<float()>&& valueFunction)
-                        : valueSupplier(std::move(valueFunction))
+  FxmeHorizontalMeter
+  (
+    std::function<float()>&& valueFunction,
+    juce::Colour vcol = juce::Colours::green,
+    juce::Colour bcol = juce::Colours::black,
+    float minv = 0.f,
+    float maxv = 100.f
+  )
+  : valueSupplier(std::move(valueFunction)),
+    valueColour(vcol),
+    backgroundColour(bcol),
+    minVal(minv),
+    maxVal(maxv)
   {
     startTimerHz(30);
-    valueColour = juce::Colours::green;
-    backgroundColour = juce::Colours::black;
-    setMinVal(0.f);
-    setMaxVal(100.f);
   }
 
   void paint(juce::Graphics& g) override
