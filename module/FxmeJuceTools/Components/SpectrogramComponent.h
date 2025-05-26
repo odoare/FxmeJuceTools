@@ -16,6 +16,7 @@ https://juce.com/tutorials/tutorial_simple_fft/
 
 #pragma once
 #define FFTORDER 11
+#define FPS 30
 
 #include <JuceHeader.h>
 #include <juce_dsp/juce_dsp.h>
@@ -87,7 +88,7 @@ public:
     {
         spectrogramFifo = fifo;
         hueColour = hue;
-        startTimerHz (60);
+        startTimerHz (FPS);
     };
 
     // ~SpectrogramComponent() override
