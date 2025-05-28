@@ -101,8 +101,8 @@ public:
     {
         //juce::Rectangle<int> drawArea = getLocalBounds();
         //g.setColour(juce::Colours::black);
-        g.fillRoundedRectangle(getLocalBounds().toFloat(),10.f);
-        g.drawImage (spectrogramImage, getLocalBounds().reduced(5.f).toFloat());
+        g.fillRoundedRectangle(getLocalBounds().reduced(5.f).toFloat(),10.f);
+        g.drawImage (spectrogramImage, getLocalBounds().reduced(10.f).toFloat());
     };
 
     void timerCallback() override
@@ -180,7 +180,7 @@ public:
 private:
     SpectrogramFifo* spectrogramFifo;
     juce::dsp::FFT forwardFFT;
-    float hueColour;
+    // float hueColour;
     juce::Colour colour = juce::Colours::green;
     float contrast = 1.0f; // Typically between 0.1 and 2.0
 
