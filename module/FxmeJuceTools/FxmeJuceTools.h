@@ -23,6 +23,7 @@ namespace fxme
   #include "Components/FxmeMeters.h"
   #include "Components/ScopeComponent.h"
   #include "Components/SpectrogramComponent.h"
+  #include "Components/SpectrumComponent.h"
   #include "Components/FxmeKnob.h"
   #include "Components/FxmeButton.h"
   #include "LookAndFeels/FxmeLookAndFeel.h"
