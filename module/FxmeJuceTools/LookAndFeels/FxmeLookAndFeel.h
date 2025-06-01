@@ -1,3 +1,5 @@
+#include <JuceHeader.h>
+
 class FxmeLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
@@ -67,7 +69,7 @@ public:
 
     if (isDown)
     {
-      g.setColour(col.brighter(1.f));
+      g.setColour(col.brighter(1.5f));
     }
       else
     {
@@ -75,47 +77,32 @@ public:
     }
     g.drawRoundedRectangle(bounds.toFloat(),w*2,t);
 
+    if (b.isMouseOver())
+    {
+      g.setFont(juce::Font(juce::Font::getDefaultSansSerifFontName(),w*3,juce::Font::bold));
+    }
+    else
+    {
+      g.setFont(juce::Font(juce::Font::getDefaultSansSerifFontName(),w*3,juce::Font::plain));
+    }
 
     if (isDown)
     {
-      g.setColour(col.brighter(0.5f));
-      g.fillRoundedRectangle(bounds.toFloat().translated(w*.3,w*.3),w*2);
+      g.setColour(col.brighter(0.7f));
+      g.fillRoundedRectangle(bounds.toFloat().translated(w*.1,w*.1),w*2);
       g.setColour(col.darker(1.f));
       g.drawText(b.getButtonText(),bounds,juce::Justification::centred);
     }
     else
     {
-      g.setColour(col.darker(.5f));
-      g.fillRoundedRectangle(bounds.toFloat().translated(w*.3,w*.3),w*2);
+      g.setColour(col.darker(.7f));
+      g.fillRoundedRectangle(bounds.toFloat().translated(w*.1,w*.1),w*2);
       g.setColour(col.brighter(1.f));
       g.drawText(b.getButtonText(),bounds,juce::Justification::centred);
     }
   }    
   
-                          
-  // juce::Slider::SliderLayout getSliderLayout (juce::Slider&) override;
-
-
-  // void drawLabel(juce::Graphics&, juce::Label&) override;
-
 private:
     // JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FxmeKnobLookAndFeel)
 
 };
-
-// class FxmeButtonLookAndFeel : public juce::LookAndFeel_V4
-// {
-// public:
-//   FxmeButtonLookAndFeel() = default;
-  
-//   // Toggle button overrides
-//   // -----------------------
-
-//   void drawToggleButton(juce::Graphics &g,
-//                             juce::ToggleButton &b,
-//                             bool 	shouldDrawButtonAsHighlighted,
-//                             bool 	shouldDrawButtonAsDown ) override;
-
-//   private:
-//   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FxmeButtonLookAndFeel)
-// };
