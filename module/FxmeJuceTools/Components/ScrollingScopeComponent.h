@@ -15,64 +15,91 @@ https://juce.com/tutorials/tutorial_simple_fft/
 */
 
 #pragma once
-#define SCOPESIZE 441
-#define SCOPEFPS 100
+#define FIFOSIZE 16384
+#define SCOPEFPS 40
 
 #include <JuceHeader.h>
 #include <juce_dsp/juce_dsp.h>
 #include <array>
 
-class ScrollingScopeFifo
+class CircularFifo
 {
 public:
 
-    ScrollingScopeFifo()
+    CircularFifo()
     {
-        std::fill (fifo.begin(), fifo.end(), 0.0f);
-        std::fill (data.begin(), data.end(), 0.0f);
+        fifoBuffer.clear();
     };
 
-    ~ScrollingScopeFifo(){};
+    ~CircularFifo(){};
 
-    void fillFifoWithBlock (const juce::AudioBuffer<float>& buffer)
+    void fillFifoWithBuffer (const juce::AudioBuffer<float>& buffer)
     {
         if (buffer.getNumChannels() > 0)
         {
             auto* channelData = buffer.getReadPointer (0,0);
 
-            for (auto i = 0; i < buffer.getNumSamples(); ++i)
-                pushNextSampleIntoFifo (channelData[i]);
-        }
-    };
-
-    void pushNextSampleIntoFifo (float sample) noexcept
-    {
-        // if the fifo contains enough data, set a flag to say
-        // that the next line should now be rendered..
-        if (fifoIndex == SCOPESIZE)
-        {
-            if (! nextBlockReady)
+            if (FIFOSIZE < buffer.getNumSamples() + numSamplesReady)
             {
-                std::fill (data.begin(), data.end(), 0.0f);
-                std::copy (fifo.begin(), fifo.end(), data.begin());
-                nextBlockReady = true;
+                std::cout << "Buffer full" << std::endl; // Not enough samples in the fifo to fill the buffer
             }
-
-            fifoIndex = 0;
+            if (writeHeadPos + buffer.getNumSamples() < FIFOSIZE)
+            {
+                fifoBuffer.copyFrom(0, writeHeadPos, channelData, buffer.getNumSamples());
+                numSamplesReady += buffer.getNumSamples();
+                writeHeadPos += buffer.getNumSamples();
+            }
+            else
+            {
+                auto remaining = FIFOSIZE - writeHeadPos;
+                fifoBuffer.copyFrom(0, writeHeadPos, channelData, remaining);
+                fifoBuffer.copyFrom(0, 0, channelData+remaining, buffer.getNumSamples() - remaining);
+                numSamplesReady += buffer.getNumSamples();
+                writeHeadPos = buffer.getNumSamples() - remaining;
+            }
         }
-
-        fifo[(size_t) fifoIndex++] = sample;
     };
 
-    bool nextBlockReady = false;
-    static constexpr auto size = SCOPESIZE;
-    std::array<float, size> fifo;
-    int fifoIndex = 0;
-    std::array<float, size> data;
+    void fillBufferWithFifo (juce::AudioBuffer<float>& bufferToFill)
+    {
+        if (numSamplesReady > bufferToFill.getNumSamples())
+        {
+            auto* channelData = bufferToFill.getWritePointer(0, 0);
+            if (readHeadPos + bufferToFill.getNumSamples() < FIFOSIZE)
+            {
+                bufferToFill.copyFrom(0, 0, fifoBuffer.getReadPointer(0, readHeadPos), bufferToFill.getNumSamples());
+                numSamplesReady -= bufferToFill.getNumSamples();
+                readHeadPos += bufferToFill.getNumSamples();
+            }
+            else
+            {
+                auto remaining = FIFOSIZE - readHeadPos;
+                bufferToFill.copyFrom(0, 0, fifoBuffer.getReadPointer(0, readHeadPos), remaining);
+                bufferToFill.copyFrom(0, remaining, fifoBuffer.getReadPointer(0, 0), bufferToFill.getNumSamples() - remaining);
+                numSamplesReady -= bufferToFill.getNumSamples();
+                readHeadPos = (bufferToFill.getNumSamples() - remaining);
+            }
+        }
+    };
+
+    void resetFifo()
+    {
+        fifoBuffer.clear();
+        numSamplesReady = 0;
+        int readHeadPos = 0;
+        int writeHeadPos = 0;
+    };
+
+    //==============================================================================
+
+    juce::AudioBuffer<float> fifoBuffer{1, FIFOSIZE};
+    int numSamplesReady = 0;
+    int readHeadPos = 0; // position of the reading head of the fifo
+    int writeHeadPos = 0; // position of the writing head of the fifo
 
 private:
     
-JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ScrollingScopeFifo)
+JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CircularFifo)
 
 };
 
@@ -80,13 +107,18 @@ JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ScrollingScopeFifo)
 class ScrollingScopeComponent : public juce::Component, private juce::Timer
 {
 public:
-    ScrollingScopeComponent(ScrollingScopeFifo* fifo,
-        int xsize = 32,
+    ScrollingScopeComponent(CircularFifo* fifo,
+        int xsize = 512,
         int ysize = 1024,
+        int smpPerPix = 128,
         juce::Colour col = juce::Colours::green)
         : scrollingScopeImage (juce::Image::RGB, xsize, ysize, true)
     {
-        scrollingScopeFifo = fifo;
+        xSize = xsize;
+        ySize = ysize;
+        xPos = 0; // initial position of the scope
+        samplesPerPixel = smpPerPix;
+        circularFifo = fifo;
         colour = col;
         startTimerHz (SCOPEFPS);
     };
@@ -100,18 +132,20 @@ public:
     void paint (juce::Graphics& g) override
     {
         //juce::Rectangle<int> drawArea = getLocalBounds();
-        //g.setColour(juce::Colours::black);
+        //g.setColour(juce::Colours::black);k
         g.fillRoundedRectangle(getLocalBounds().reduced(5.f).toFloat(),10.f);
         g.drawImage (scrollingScopeImage, getLocalBounds().reduced(10.f).toFloat());
     };
 
     void timerCallback() override
     {
-        if (scrollingScopeFifo->nextBlockReady)
+        // std::cout << circularFifo->numSamplesReady << " samples ready in the fifo" << std::endl;
+        if (circularFifo->numSamplesReady < samplesPerPixel)
+            return; // not enough samples to draw a new line
+        else
         {
-            drawNextLineOfScrollingScope();
-            scrollingScopeFifo->nextBlockReady = false;
-            repaint();
+            drawNextLineOfScrollingScope(); // if we have enough samples, we draw a new line
+            repaint(); // repaint the component to show the new line
         }
     };
 
@@ -122,20 +156,7 @@ public:
 
     void mouseDrag(const juce::MouseEvent& e)
     {
-        // if is is a mouseClick event, we check if it is a double click (doesn't work)
-        // if (e.mouseWasClicked())
-        // {
-        //     std::cout << "ScrollingScopeComponent: Mouse clicked at position: " << e.position.toString() << std::endl;
-        //     if (e.getNumberOfClicks() > 1)
-        //     {
-        //         // reset the hue and contrast to default values
-        //         hueColour = 0.5f;
-        //         contrast = 1.0f;
-        //         repaint();
-        //         std::cout << "ScrollingScopeComponent: Reset hue and contrast to default values." << std::endl;
-        //         return;
-        //     }
-        // }
+
         // Adjust the contrast based on mouse position
         float changeVal = 0.0;
         if(e.getDistanceFromDragStartY() < 0) changeVal = -0.005f; //up
@@ -144,44 +165,123 @@ public:
 
     }
 
+    void setScrolling(bool shouldScroll)
+    {
+        if (shouldScroll)
+        {
+            startTimerHz(SCOPEFPS);
+        }
+        else
+        {
+            stopTimer();
+        }
+    }
+
+    void setSamplesPerPixel(int newValue)
+    {
+        if (newValue > 0)
+        {
+            samplesPerPixel = newValue;
+        }
+        else
+        {
+            std::cout << "Samples per pixel must be greater than 0" << std::endl;
+        }
+    }
+
+    int getSamplesPerPixel() const
+    {
+        return samplesPerPixel;
+    }
+
     void drawNextLineOfScrollingScope()
     {
-        auto rightHandEdge = scrollingScopeImage.getWidth() - 1;
-        auto imageHeight   = scrollingScopeImage.getHeight();
 
-        // first, shuffle our image leftwards by 1 pixel..
-        scrollingScopeImage.moveImageSection (0, 0, 1, 0, rightHandEdge, imageHeight);         // [1]
+        if (circularFifo->numSamplesReady < samplesPerPixel)
+            return; // not enough samples to draw a new line
 
-        auto levels = juce::FloatVectorOperations::findMinAndMax(scrollingScopeFifo->data.data(), scrollingScopeFifo->size ); // [2]
-        juce::Image::BitmapData bitmap { scrollingScopeImage, rightHandEdge, 0, 1, imageHeight, juce::Image::BitmapData::writeOnly }; // [4]
+        auto scrollingScopeFifo = circularFifo;
 
-        for (int y = 1; y < imageHeight; ++y)                                              // [5]
+        // Number of blocks of samples to read from the fifo
+        auto numBlocks = scrollingScopeFifo->numSamplesReady / samplesPerPixel;
+        std::cout << "NSamples:" << scrollingScopeFifo->numSamplesReady
+                    << "  SpPerPix:" << samplesPerPixel
+                    << "  NbBlocks:" << numBlocks << std::endl;
+
+        // auto rightHandEdge = scrollingScopeImage.getWidth() - numBlocks;
+        // auto imageHeight   = scrollingScopeImage.getHeight();
+
+        // Si on atteint le bord droit de l'image, on doit la scroller
+        if (xPos+numBlocks >= xSize)
         {
-            float yValue = 2*float(y)/float(imageHeight) - 1;
-
-            if (yValue > levels.getEnd())
-            {
-                bitmap.setPixelColour (0, y, juce::Colours::black); // If the level is out of range, set pixel to black
-            }
-            else if (yValue < levels.getStart())
-            {
-                bitmap.setPixelColour (0, y, juce::Colours::black); // If the level is out of range, set pixel to white
-            }
-            else
-            {
-                bitmap.setPixelColour (0, y, colour); // Otherwise, set pixel to colour
-            }
+            int numBlocksToShift = xPos + numBlocks - xSize + 1;
+            xPos -= numBlocksToShift;
+            scrollingScopeImage.moveImageSection (0, 0, numBlocksToShift, 0,  xSize-numBlocksToShift, ySize);
         }
+
+        // Now we can draw the new samples on the right hand edge of the image
+        // We will draw a vertical line of pixels, one for each block of samples
+        // We will use the colour set in the constructor, or the default colour if none was set
+
+        for (int i=0; i<numBlocks; ++i)
+        {
+            // // Get the next block of samples from the fifo
+            juce::AudioBuffer<float> blockBuffer(1, samplesPerPixel);
+            scrollingScopeFifo->fillBufferWithFifo(blockBuffer);
+            auto levels = juce::FloatVectorOperations::findMinAndMax(blockBuffer.getReadPointer(0), samplesPerPixel);
+            juce::Image::BitmapData bitmap { scrollingScopeImage, xPos+i, 0, 1, ySize, juce::Image::BitmapData::writeOnly };
+
+            for (int y = 1; y < ySize; ++y)
+            {
+                float yValue = 2*float(y)/float(ySize) - 1;
+
+                if (yValue > levels.getEnd())
+                {
+                    bitmap.setPixelColour (0, y, juce::Colours::black); // If the level is out of range, set pixel to black
+                }
+                else if (yValue < levels.getStart())
+                {
+                    bitmap.setPixelColour (0, y, juce::Colours::black); // If the level is out of range, set pixel to white
+                }
+                else
+                {
+                    bitmap.setPixelColour (0, y, colour); // Otherwise, set pixel to colour
+                }
+            }
+
+        }
+
+        // Update the x position for the next line
+        // We add the number of blocks we just drew to the x position
+        xPos += numBlocks;
+
     };
 
-    //static constexpr auto fftOrder = 10;                // [1]
-    static constexpr auto size = SCOPESIZE;     // [2]
+    CircularFifo* getFifo()
+    {
+        return circularFifo;
+    }
+
+    void resetScope()
+    {
+        circularFifo->resetFifo();
+        scrollingScopeImage.clear(juce::Rectangle<int>(scrollingScopeImage.getWidth(),
+                                    scrollingScopeImage.getHeight()),
+                                    juce::Colours::black);
+        xPos = 0;
+        repaint();
+    }
+
     juce::Image scrollingScopeImage ;
 
+
+
 private:
-    ScrollingScopeFifo* scrollingScopeFifo;
-    // float hueColour;
-    juce::Colour colour = juce::Colours::green;
+    CircularFifo* circularFifo;
+    int xSize, ySize;
+    int xPos;
+    int samplesPerPixel;
+    juce::Colour colour;
     float contrast = 1.0f; // Typically between 0.1 and 2.0
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ScrollingScopeComponent)
