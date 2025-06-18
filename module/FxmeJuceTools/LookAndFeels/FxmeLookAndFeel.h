@@ -77,14 +77,14 @@ public:
     }
     g.drawRoundedRectangle(bounds.toFloat(),w*2,t);
 
-    if (b.isMouseOver())
-    {
-      g.setFont(juce::Font(juce::Font::getDefaultSansSerifFontName(),w*3,juce::Font::bold));
-    }
-    else
-    {
-      g.setFont(juce::Font(juce::Font::getDefaultSansSerifFontName(),w*3,juce::Font::plain));
-    }
+    // if (b.isMouseOver())
+    // {
+    //   g.setFont(juce::Font(juce::Font::getDefaultSansSerifFontName(),w*3,juce::Font::bold));
+    // }
+    // else
+    // {
+    //   g.setFont(juce::Font(juce::Font::getDefaultSansSerifFontName(),w*3,juce::Font::plain));
+    // }
 
     if (isDown)
     {
