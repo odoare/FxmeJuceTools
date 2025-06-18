@@ -133,6 +133,7 @@ public:
     {
         //juce::Rectangle<int> drawArea = getLocalBounds();
         //g.setColour(juce::Colours::black);k
+        g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
         g.fillRoundedRectangle(getLocalBounds().reduced(5.f).toFloat(),10.f);
         g.drawImage (scrollingScopeImage, getLocalBounds().reduced(10.f).toFloat());
     };
