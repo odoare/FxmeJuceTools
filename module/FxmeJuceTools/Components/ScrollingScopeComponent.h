@@ -16,7 +16,7 @@ https://juce.com/tutorials/tutorial_simple_fft/
 
 #pragma once
 #define FIFOSIZE 16384
-#define SCOPEFPS 40
+#define SCOPEFPS 50
 
 #include <JuceHeader.h>
 #include <juce_dsp/juce_dsp.h>
@@ -131,11 +131,12 @@ public:
     //==============================================================================
     void paint (juce::Graphics& g) override
     {
-        //juce::Rectangle<int> drawArea = getLocalBounds();
-        //g.setColour(juce::Colours::black);k
         g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
         g.fillRoundedRectangle(getLocalBounds().reduced(5.f).toFloat(),10.f);
-        g.drawImage (scrollingScopeImage, getLocalBounds().reduced(10.f).toFloat());
+        g.drawImage (scrollingScopeImage,
+            getLocalBounds().reduced(10.f).toFloat()
+            // ,juce::RectanglePlacement::doNotResize
+        );
     };
 
     void timerCallback() override
@@ -232,15 +233,19 @@ public:
             auto levels = juce::FloatVectorOperations::findMinAndMax(blockBuffer.getReadPointer(0), samplesPerPixel);
             juce::Image::BitmapData bitmap { scrollingScopeImage, xPos+i, 0, 1, ySize, juce::Image::BitmapData::writeOnly };
 
+            // On veut eviter les cassures dans le graphique lorsque les variations sont rapides
+            auto yMin = juce::jmin<float>(prevMax,levels.getStart());
+            auto yMax = juce::jmax<float>(prevMin,levels.getEnd());
+
             for (int y = 1; y < ySize; ++y)
             {
                 float yValue = 2*float(y)/float(ySize) - 1;
 
-                if (yValue > levels.getEnd())
+                if (yValue > yMax)
                 {
                     bitmap.setPixelColour (0, y, juce::Colours::black); // If the level is out of range, set pixel to black
                 }
-                else if (yValue < levels.getStart())
+                else if (yValue < yMin)
                 {
                     bitmap.setPixelColour (0, y, juce::Colours::black); // If the level is out of range, set pixel to white
                 }
@@ -250,6 +255,18 @@ public:
                 }
             }
 
+            // On met à jour les valeurs précédentes
+            prevMin = levels.getStart();
+            prevMax = levels.getEnd();
+
+        }
+
+        juce::Image::BitmapData bitmap1 { scrollingScopeImage, 0, 0, xSize, 1, juce::Image::BitmapData::writeOnly };
+        juce::Image::BitmapData bitmap2 { scrollingScopeImage, 0, ySize-1, xSize, 1, juce::Image::BitmapData::writeOnly };
+        for (int ix=0; ix<xSize; ix++)
+        {
+            bitmap1.setPixelColour (ix, 0, colour); // Otherwise, set pixel to colour
+            bitmap2.setPixelColour (ix, 0, colour); // Otherwise, set pixel to colour
         }
 
         // Update the x position for the next line
@@ -275,8 +292,6 @@ public:
 
     juce::Image scrollingScopeImage ;
 
-
-
 private:
     CircularFifo* circularFifo;
     int xSize, ySize;
@@ -284,6 +299,7 @@ private:
     int samplesPerPixel;
     juce::Colour colour;
     float contrast = 1.0f; // Typically between 0.1 and 2.0
+    float prevMin, prevMax;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ScrollingScopeComponent)
 };
