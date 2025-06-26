@@ -15,99 +15,20 @@ https://juce.com/tutorials/tutorial_simple_fft/
 */
 
 #pragma once
-#define FIFOSIZE 16384
+// #define FIFOSIZE 16384
 #define SCOPEFPS 50
 
 #include <JuceHeader.h>
-#include <juce_dsp/juce_dsp.h>
+#include <FxmeJuceTools/Dsp/CircularFifo.h>
+// #include <juce_dsp/juce_dsp.h>
 #include <array>
 
-class CircularFifo
-{
-public:
-
-    CircularFifo()
-    {
-        fifoBuffer.clear();
-    };
-
-    ~CircularFifo(){};
-
-    void fillFifoWithBuffer (const juce::AudioBuffer<float>& buffer)
-    {
-        if (buffer.getNumChannels() > 0)
-        {
-            auto* channelData = buffer.getReadPointer (0,0);
-
-            if (FIFOSIZE < buffer.getNumSamples() + numSamplesReady)
-            {
-                std::cout << "Buffer full" << std::endl; // Not enough samples in the fifo to fill the buffer
-            }
-            if (writeHeadPos + buffer.getNumSamples() < FIFOSIZE)
-            {
-                fifoBuffer.copyFrom(0, writeHeadPos, channelData, buffer.getNumSamples());
-                numSamplesReady += buffer.getNumSamples();
-                writeHeadPos += buffer.getNumSamples();
-            }
-            else
-            {
-                auto remaining = FIFOSIZE - writeHeadPos;
-                fifoBuffer.copyFrom(0, writeHeadPos, channelData, remaining);
-                fifoBuffer.copyFrom(0, 0, channelData+remaining, buffer.getNumSamples() - remaining);
-                numSamplesReady += buffer.getNumSamples();
-                writeHeadPos = buffer.getNumSamples() - remaining;
-            }
-        }
-    };
-
-    void fillBufferWithFifo (juce::AudioBuffer<float>& bufferToFill)
-    {
-        if (numSamplesReady > bufferToFill.getNumSamples())
-        {
-            auto* channelData = bufferToFill.getWritePointer(0, 0);
-            if (readHeadPos + bufferToFill.getNumSamples() < FIFOSIZE)
-            {
-                bufferToFill.copyFrom(0, 0, fifoBuffer.getReadPointer(0, readHeadPos), bufferToFill.getNumSamples());
-                numSamplesReady -= bufferToFill.getNumSamples();
-                readHeadPos += bufferToFill.getNumSamples();
-            }
-            else
-            {
-                auto remaining = FIFOSIZE - readHeadPos;
-                bufferToFill.copyFrom(0, 0, fifoBuffer.getReadPointer(0, readHeadPos), remaining);
-                bufferToFill.copyFrom(0, remaining, fifoBuffer.getReadPointer(0, 0), bufferToFill.getNumSamples() - remaining);
-                numSamplesReady -= bufferToFill.getNumSamples();
-                readHeadPos = (bufferToFill.getNumSamples() - remaining);
-            }
-        }
-    };
-
-    void resetFifo()
-    {
-        fifoBuffer.clear();
-        numSamplesReady = 0;
-        int readHeadPos = 0;
-        int writeHeadPos = 0;
-    };
-
-    //==============================================================================
-
-    juce::AudioBuffer<float> fifoBuffer{1, FIFOSIZE};
-    int numSamplesReady = 0;
-    int readHeadPos = 0; // position of the reading head of the fifo
-    int writeHeadPos = 0; // position of the writing head of the fifo
-
-private:
-    
-JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CircularFifo)
-
-};
 
 //==============================================================================
-class ScrollingScopeComponent : public juce::Component, private juce::Timer
+class ScrollingScopeComponent : public juce::Component, public juce::Timer
 {
 public:
-    ScrollingScopeComponent(CircularFifo* fifo,
+    ScrollingScopeComponent(fxme::CircularFifo* fifo,
         int xsize = 512,
         int ysize = 1024,
         int smpPerPix = 128,
@@ -121,6 +42,11 @@ public:
         circularFifo = fifo;
         colour = col;
         startTimerHz (SCOPEFPS);
+    };
+
+    ~ScrollingScopeComponent()
+    {
+        stopTimer();
     };
 
     // ~ScrollingScopeComponent() override
@@ -151,20 +77,18 @@ public:
         }
     };
 
-    void setContrast(float newContrast)
+    void setGain(float newGain)
     {
-        contrast = juce::jlimit(0.1f, 2.0f, newContrast);
+        scopeGain = juce::jlimit(0.1f, 2.0f, newGain);
     }
 
     void mouseDrag(const juce::MouseEvent& e)
     {
-
         // Adjust the contrast based on mouse position
         float changeVal = 0.0;
         if(e.getDistanceFromDragStartY() < 0) changeVal = -0.005f; //up
         if(e.getDistanceFromDragStartY() > 0) changeVal = +0.005f; //down
-        setContrast(contrast+changeVal);
-
+        setGain(scopeGain+changeVal);
     }
 
     void setScrolling(bool shouldScroll)
@@ -206,9 +130,9 @@ public:
 
         // Number of blocks of samples to read from the fifo
         auto numBlocks = scrollingScopeFifo->numSamplesReady / samplesPerPixel;
-        std::cout << "NSamples:" << scrollingScopeFifo->numSamplesReady
-                    << "  SpPerPix:" << samplesPerPixel
-                    << "  NbBlocks:" << numBlocks << std::endl;
+        // std::cout << "NSamples:" << scrollingScopeFifo->numSamplesReady
+        //             << "  SpPerPix:" << samplesPerPixel
+        //             << "  NbBlocks:" << numBlocks << std::endl;
 
         // auto rightHandEdge = scrollingScopeImage.getWidth() - numBlocks;
         // auto imageHeight   = scrollingScopeImage.getHeight();
@@ -234,8 +158,8 @@ public:
             juce::Image::BitmapData bitmap { scrollingScopeImage, xPos+i, 0, 1, ySize, juce::Image::BitmapData::writeOnly };
 
             // On veut eviter les cassures dans le graphique lorsque les variations sont rapides
-            auto yMin = juce::jmin<float>(prevMax,levels.getStart());
-            auto yMax = juce::jmax<float>(prevMin,levels.getEnd());
+            auto yMin = scopeGain*juce::jmin<float>(prevMax,levels.getStart());
+            auto yMax = scopeGain*juce::jmax<float>(prevMin,levels.getEnd());
 
             for (int y = 1; y < ySize; ++y)
             {
@@ -275,7 +199,7 @@ public:
 
     };
 
-    CircularFifo* getFifo()
+    fxme::CircularFifo* getFifo()
     {
         return circularFifo;
     }
@@ -293,12 +217,12 @@ public:
     juce::Image scrollingScopeImage ;
 
 private:
-    CircularFifo* circularFifo;
+    fxme::CircularFifo* circularFifo;
     int xSize, ySize;
     int xPos;
     int samplesPerPixel;
     juce::Colour colour;
-    float contrast = 1.0f; // Typically between 0.1 and 2.0
+    float scopeGain = 1.0f; // Typically between 0.1 and 2.0
     float prevMin, prevMax;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ScrollingScopeComponent)

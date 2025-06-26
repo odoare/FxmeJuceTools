@@ -28,4 +28,5 @@ namespace fxme
   #include "Components/FxmeKnob.h"
   #include "Components/FxmeButton.h"
   #include "LookAndFeels/FxmeLookAndFeel.h"
+  #include "Dsp/CircularFifo.h"
 }

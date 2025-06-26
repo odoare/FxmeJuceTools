@@ -10,4 +10,5 @@ namespace fxme
     #include "Components/FxmeKnob.cpp"
     #include "Components/FxmeButton.cpp"
     #include "LookAndFeels/FxmeLookAndFeel.cpp"
+    #include "Dsp/CircularFifo.cpp"
 }
