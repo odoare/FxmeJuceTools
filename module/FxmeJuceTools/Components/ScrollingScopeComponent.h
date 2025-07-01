@@ -108,6 +108,7 @@ public:
         if (newValue > 0)
         {
             samplesPerPixel = newValue;
+            std::cout << "New samples per pixels value : " << newValue << std::endl;
         }
         else
         {
