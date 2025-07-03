@@ -8,9 +8,6 @@ O. Doaré - 2025
 
 github.com/odoare/FxmeJuceTools
 
-This ScrollingScope component was inspired by the JUCE tutorial :
-https://juce.com/tutorials/tutorial_simple_fft/
-
 --------------------------------------------------------------
 */
 
@@ -19,6 +16,7 @@ https://juce.com/tutorials/tutorial_simple_fft/
 #define SCOPEFPS 50
 
 #include <JuceHeader.h>
+#include <FxmeJuceTools/FxmeJuceTools.h>
 #include <FxmeJuceTools/Dsp/CircularFifo.h>
 // #include <juce_dsp/juce_dsp.h>
 #include <array>
