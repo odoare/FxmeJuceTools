@@ -4,6 +4,8 @@
 //
 // ==========================================================
 
+#include <JuceHeader.h>
+
 class FxmeKnob
 {
 public:
@@ -36,10 +38,11 @@ public:
 
     juce::Slider slider;
     juce::Label valueLabel, textLabel;
-    juce::FlexBox flexBox;
 
 private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
+
+    juce::FlexBox flexBox;
 
     void setFlex()
     {
