@@ -13,7 +13,7 @@ public:
           float rotaryEndAngle, 
           juce::Slider& slider) override
   {
-    float diameter = 0.85*juce::jmin(width,height);
+    float diameter = 0.9*juce::jmin(width,height);
     float radius = diameter * 0.5;
     float centreX = x + width * 0.5;
     float centreY = y + height * 0.5;
