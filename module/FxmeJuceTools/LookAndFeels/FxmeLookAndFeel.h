@@ -49,10 +49,52 @@ public:
 
     g.setColour(slider.findColour(juce::Slider::trackColourId));
     juce::Path arc2;
-    arc2.addArc(centreX-diameter/2, centreY-diameter/2, diameter, diameter, rotaryStartAngle, angle, true);
+
+    const bool drawFromCentre = slider.getProperties().getWithDefault ("drawFromCentre", false);
+
+    if (drawFromCentre)
+    {
+        // For bipolar sliders like pan, draw from the center position.
+        const float centreAngle = rotaryStartAngle + (rotaryEndAngle - rotaryStartAngle) * 0.5f;
+
+        // To ensure the arc is drawn in the correct direction from the center,
+        // we use jmin and jmax to define the start and end angles.
+        arc2.addArc (rx, ry, diameter, diameter,
+                     juce::jmin (angle, centreAngle),
+                     juce::jmax (angle, centreAngle),
+                     true);
+    }
+    else
+    {
+        arc2.addArc(rx, ry, diameter, diameter, rotaryStartAngle, angle, true);
+    }
     g.strokePath(arc2, path);
+
+    // Draw the slider's value as text in the center
+    auto text = slider.getTextFromValue(slider.getValue());
+    g.setColour(juce::Colours::white.withAlpha(0.7f));
+    // Make font size proportional to the knob's diameter
+    g.setFont(juce::jmin(15.0f, diameter * 0.3f));
+    g.drawText(text, dialArea.toNearestInt(), juce::Justification::centred, true);
     
   };
+
+  juce::Slider::SliderLayout getSliderLayout (juce::Slider& slider) override
+  {
+      auto style = slider.getSliderStyle();
+
+      // For our custom linear sliders, we want the bar to fill the entire component bounds.
+      if (style == juce::Slider::LinearHorizontal || style == juce::Slider::LinearBarVertical)
+      {
+          juce::Slider::SliderLayout layout;
+          layout.sliderBounds = slider.getLocalBounds();
+          layout.textBoxBounds = {}; // No text box
+          return layout;
+      }
+
+      // For all other styles (like rotary), use the default V4 implementation.
+      return LookAndFeel_V4::getSliderLayout (slider);
+  }
 
   void drawToggleButton(juce::Graphics &g,
                             juce::ToggleButton &b,
@@ -100,7 +142,163 @@ public:
       g.setColour(col.brighter(1.f));
       g.drawText(b.getButtonText(),bounds,juce::Justification::centred);
     }
-  }    
+  }
+
+  void drawButtonBackground(juce::Graphics& g,
+                            juce::Button& button,
+                            const juce::Colour& backgroundColour,
+                            bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+  {
+      auto bounds = button.getLocalBounds();
+      float w = juce::jmin<float>(bounds.getWidth(), bounds.getHeight()) * 0.1f;
+      bounds = bounds.reduced(2 * w);
+      
+      // Use buttonColourId for TextButtons, fallback to a default
+      auto col = button.findColour(juce::TextButton::buttonColourId);
+      float t = w * 0.5f; // thickness
+
+      if (shouldDrawButtonAsDown)
+      {
+          g.setColour(col.brighter(1.5f));
+      }
+      else
+      {
+          g.setColour(col);
+      }
+      g.drawRoundedRectangle(bounds.toFloat(), w * 2, t);
+
+      if (shouldDrawButtonAsDown)
+      {
+          g.setColour(col.brighter(0.7f));
+          g.fillRoundedRectangle(bounds.toFloat().translated(w * 0.1, w * 0.1), w * 2);
+      }
+      else
+      {
+          g.setColour(col.darker(0.7f));
+          g.fillRoundedRectangle(bounds.toFloat().translated(w * 0.1, w * 0.1), w * 2);
+      }
+  }
+
+  void drawLinearSlider(juce::Graphics& g, 
+          int x, int y, 
+          int width,
+          int height, 
+          float sliderPos, 
+          float minSliderPos, 
+          float maxSliderPos, 
+          const juce::Slider::SliderStyle style, 
+          juce::Slider& slider) override
+  {
+    if (style == juce::Slider::LinearBarVertical)
+    {
+        auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat();
+        
+        // Background
+        g.setColour (juce::Colours::black);
+        g.fillRoundedRectangle (bounds, 4.0f);
+
+        // Get the proportion directly from the slider's value (0.0 to 1.0)
+        const float levelProportion = (float) slider.valueToProportionOfLength (slider.getValue());
+        auto filledBounds = bounds;
+
+        // Only draw the bar if the level is greater than the minimum
+        if (levelProportion > 0.0f)
+        {
+            auto colour = slider.findColour (juce::Slider::trackColourId);
+            // Remove the unfilled part from the top
+            filledBounds.removeFromTop (filledBounds.getHeight() * (1.0f - levelProportion));
+            g.setColour(colour);
+            g.fillRoundedRectangle(filledBounds, 4.0f);
+
+            // Draw a bright indicator line on top
+            auto lineBounds = filledBounds.withHeight (3.0f);
+            g.setColour (colour.brighter(0.4f));
+            g.fillRect (lineBounds);
+        }
+
+        // Draw the slider's value as text in the center
+        auto text = slider.getTextFromValue(slider.getValue());
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
+        // Make font size proportional to the component's height
+        g.setFont(juce::jmin(15.0f, height * 0.3f));
+        g.drawText(text, bounds.toNearestInt(), juce::Justification::centred, true);
+
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
+        g.drawRoundedRectangle(bounds, 4.f, 1.f);
+
+    }
+    else if (style == juce::Slider::LinearHorizontal)
+    {
+        auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat();
+
+        // Background
+        g.setColour (juce::Colours::black);
+        g.fillRoundedRectangle (bounds, 4.0f);
+
+        // Get the proportion directly from the slider's value (0.0 to 1.0)
+        const float levelProportion = (float) slider.valueToProportionOfLength (slider.getValue());
+        auto filledBounds = bounds;
+
+        const bool drawFromCentre = slider.getProperties().getWithDefault ("drawFromCentre", false);
+        auto colour = slider.findColour (juce::Slider::trackColourId);
+
+        if (drawFromCentre)
+        {
+            const float centreProportion = 0.5f;
+            g.setColour(colour);
+
+            if (levelProportion > centreProportion) // Value is in the right half
+            {
+                filledBounds.removeFromLeft(bounds.getWidth() * centreProportion);
+                filledBounds.removeFromRight(bounds.getWidth() * (1.0f - levelProportion));
+                g.fillRoundedRectangle(filledBounds, 4.0f);
+
+                auto lineBounds = filledBounds.withWidth(3.0f).withX(filledBounds.getRight() - 3.0f);
+                g.setColour (colour.brighter(0.4f));
+                g.fillRect (lineBounds);
+            }
+            else // Value is in the left half
+            {
+                filledBounds.removeFromRight(bounds.getWidth() * (1.0f - centreProportion));
+                filledBounds.removeFromLeft(bounds.getWidth() * levelProportion);
+                g.fillRoundedRectangle(filledBounds, 4.0f);
+
+                auto lineBounds = filledBounds.withWidth(3.0f).withX(filledBounds.getX());
+                g.setColour (colour.brighter(0.4f));
+                g.fillRect (lineBounds);
+            }
+        }
+        else // Default unipolar drawing
+        {
+            if (levelProportion > 0.0f)
+            {
+                filledBounds.removeFromRight (filledBounds.getWidth() * (1.0f - levelProportion));
+                g.setColour(colour);
+                g.fillRoundedRectangle(filledBounds, 4.0f);
+
+                auto lineBounds = filledBounds.withWidth(3.0f).withX(filledBounds.getRight() - 3.0f);
+                g.setColour (colour.brighter(0.4f));
+                g.fillRect (lineBounds);
+            }
+        }
+
+        // Draw the slider's value as text in the center
+        auto text = slider.getTextFromValue(slider.getValue());
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
+        g.setFont(juce::jmin(15.0f, height * 0.3f));
+        g.drawText(text, bounds.toNearestInt(), juce::Justification::centred, true);
+
+        // Draw outline
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
+        g.drawRoundedRectangle(bounds, 4.f, 1.f);
+    }
+    else
+    {
+        // Fallback to the default implementation for other slider styles
+        LookAndFeel_V4::drawLinearSlider(g, x, y, width, height, sliderPos, minSliderPos, maxSliderPos, style, slider);
+    }
+  }
+  
   
 private:
     // JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FxmeKnobLookAndFeel)
