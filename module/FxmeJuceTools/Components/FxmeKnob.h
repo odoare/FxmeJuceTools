@@ -6,6 +6,50 @@
 
 #include <JuceHeader.h>
 
+// A helper class that inherits from Slider to override its mouse behaviour.
+class KnobSlider : public juce::Slider
+{
+public:
+    KnobSlider() = default;
+
+    void mouseDown (const juce::MouseEvent& event) override
+    {
+        if (event.mods.isRightButtonDown())
+        {
+            // The AlertWindow must be heap-allocated for async callbacks.
+            // JUCE will manage its deletion.
+            auto* w = new juce::AlertWindow ("Set Value", "Enter a new value", juce::AlertWindow::QuestionIcon);
+
+            w->addTextEditor ("text", getTextFromValue (getValue()), "Value:");
+            w->addButton ("OK", 1, juce::KeyPress (juce::KeyPress::returnKey, 0, 0));
+            w->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey, 0, 0));
+
+            // Use a SafePointer to the AlertWindow to avoid dangling pointers in the async callback.
+            juce::Component::SafePointer<juce::AlertWindow> safeW (w);
+
+            // Use the static `create` method to build the callback.
+            // It returns a raw pointer, and JUCE will manage its deletion.
+            auto* callback = juce::ModalCallbackFunction::create ([this, safeW] (int result)
+            {
+                if (safeW == nullptr)
+                    return;
+
+                if (result != 0) // OK button
+                {
+                    auto newText = safeW->getTextEditorContents ("text");
+                    setValue (getValueFromText (newText), juce::sendNotificationSync);
+                }
+            });
+
+            w->enterModalState (true, callback, true);
+        }
+        else
+        {
+            juce::Slider::mouseDown (event);
+        }
+    }
+};
+
 class FxmeKnob : public juce::Component // Note: Consider namespacing your components, e.g., `namespace fxme { ... }`
 {
 public:
@@ -14,8 +58,8 @@ public:
              juce::String labelText = "", 
              juce::Colour knobColor = juce::Colours::white)
     {
-        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow,true,80,15);
+        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag); 
+        slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         slider.setTextBoxIsEditable(true);
         slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
         slider.setColour(juce::Slider::thumbColourId, knobColor);
@@ -64,10 +108,11 @@ public:
         slider.setLookAndFeel(newLookAndFeel);
     }
 
-    juce::Slider slider;
+
+public:
+    KnobSlider slider;
     juce::Label valueLabel, textLabel;
 
-private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FxmeKnob)
