@@ -50,7 +50,7 @@ public:
     }
 };
 
-class FxmeKnob : public juce::Component // Note: Consider namespacing your components, e.g., `namespace fxme { ... }`
+class FxmeKnob : public juce::Component
 {
 public:
     FxmeKnob(juce::AudioProcessorValueTreeState& apvts, 
