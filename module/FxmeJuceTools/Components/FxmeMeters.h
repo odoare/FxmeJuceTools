@@ -226,3 +226,69 @@ private:
                 valueColour{juce::Colours::yellow};
   float minVal,maxVal;
 };
+
+class FxmeVerticalMeter : public juce::Component, public juce::Timer
+{
+public:
+  FxmeVerticalMeter
+  (
+    std::function<float()>&& valueFunction,
+    juce::Colour vcol = juce::Colours::green,
+    juce::Colour bcol = juce::Colours::black,
+    float minv = 0.f,
+    float maxv = 100.f
+  )
+  : valueSupplier(std::move(valueFunction)),
+    valueColour(vcol),
+    backgroundColour(bcol),
+    minVal(minv),
+    maxVal(maxv)
+  {
+    startTimerHz(30);
+  }
+
+  void paint(juce::Graphics& g) override
+  {
+    const auto level = valueSupplier();
+
+    auto bounds = getLocalBounds().reduced(2.f).toFloat();
+    auto h = bounds.getHeight();
+    auto y = bounds.getTopLeft().getY();
+    auto yvu = y + h * 0.8f;
+    
+    auto valBounds = bounds;
+    valBounds.setBottom(yvu);
+    g.setColour(backgroundColour);
+    g.fillRect(valBounds);
+    
+    const auto valHeight = juce::jmap(level, minVal, maxVal, 0.0f, valBounds.getHeight());
+    auto fillBounds = valBounds;
+    fillBounds.setTop(valBounds.getBottom() - juce::jlimit(0.0f, valBounds.getHeight(), valHeight));
+    
+    g.setColour(valueColour);
+    g.fillRect(fillBounds);
+
+    g.setColour(juce::Colours::darkgrey);
+    g.drawRect(valBounds);
+
+    g.setColour(juce::Colours::wheat);
+    bounds.setTop(yvu);
+    g.drawText(juce::String(level, 1), bounds, juce::Justification::centred);
+  }
+
+  void timerCallback() override
+  {
+    repaint();
+  }
+
+  void setValueColour(juce::Colour newColour) { valueColour = newColour; }
+  void setBackgroundColour(juce::Colour newColour) { backgroundColour = newColour; }
+  void setMinVal(float val) { minVal = val; }
+  void setMaxVal(float val) { maxVal = val; }
+
+private:
+  std::function<float()> valueSupplier;
+  juce::Colour backgroundColour{juce::Colours::black},
+                valueColour{juce::Colours::yellow};
+  float minVal,maxVal;
+};
