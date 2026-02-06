@@ -216,12 +216,21 @@ public:
             g.fillRect (lineBounds);
         }
 
-        // Draw the slider's value as text in the center
-        auto text = slider.getTextFromValue(slider.getValue());
+        // Draw the slider's value as text in the center (3 lines: sign, value, unit)
+        float val = (float)slider.getValue();
+        juce::String signStr = (val > 0.001f) ? "+" : (val < -0.001f ? "-" : "");
+        juce::String valStr = juce::String (std::abs (val), 1);
+        juce::String unitStr = slider.getTextValueSuffix();
+
         g.setColour(juce::Colours::white.withAlpha(0.7f));
-        // Make font size proportional to the component's height
-        g.setFont(juce::jmin(15.0f, height * 0.3f));
-        g.drawText(text, bounds.toNearestInt(), juce::Justification::centred, true);
+        float fontSize = juce::jmin(14.0f, height * 0.1f);
+        g.setFont(fontSize);
+        float lineHeight = fontSize;
+        float startY = bounds.getCentreY() - (lineHeight * 3.0f) * 0.5f;
+
+        g.drawText(signStr, bounds.getX(), (int)startY, (int)bounds.getWidth(), (int)lineHeight, juce::Justification::centred, false);
+        g.drawText(valStr, bounds.getX(), (int)(startY + lineHeight), (int)bounds.getWidth(), (int)lineHeight, juce::Justification::centred, false);
+        g.drawText(unitStr, bounds.getX(), (int)(startY + lineHeight * 2), (int)bounds.getWidth(), (int)lineHeight, juce::Justification::centred, false);
 
         g.setColour(juce::Colours::white.withAlpha(0.7f));
         g.drawRoundedRectangle(bounds, 4.f, 1.f);
@@ -283,7 +292,7 @@ public:
         }
 
         // Draw the slider's value as text in the center
-        auto text = slider.getTextFromValue(slider.getValue());
+        auto text = juce::String (slider.getValue(), 2);
         g.setColour(juce::Colours::white.withAlpha(0.7f));
         g.setFont(juce::jmin(15.0f, height * 0.3f));
         g.drawText(text, bounds.toNearestInt(), juce::Justification::centred, true);
