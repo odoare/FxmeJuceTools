@@ -207,7 +207,7 @@ public:
             auto colour = slider.findColour (juce::Slider::trackColourId);
             // Remove the unfilled part from the top
             filledBounds.removeFromTop (filledBounds.getHeight() * (1.0f - levelProportion));
-            g.setColour(colour);
+            g.setColour(colour.darker());
             g.fillRoundedRectangle(filledBounds, 4.0f);
 
             // Draw a bright indicator line on top
