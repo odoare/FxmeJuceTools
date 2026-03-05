@@ -27,6 +27,8 @@ namespace fxme
   #include "Components/ScrollingScopeComponent.h"
   #include "Components/FxmeKnob.h"
   #include "Components/FxmeButton.h"
+  #include "Components/FxmeSlider.h"
   #include "LookAndFeels/FxmeLookAndFeel.h"
+  #include "Components/TitleBar.h"
   #include "Dsp/CircularFifo.h"
 }
