@@ -13,7 +13,7 @@ public:
           float rotaryEndAngle, 
           juce::Slider& slider) override
   {
-    float diameter = 0.9*juce::jmin(width,height);
+    float diameter = 0.7*juce::jmin(width,height);
     float radius = diameter * 0.5;
     float centreX = x + width * 0.5;
     float centreY = y + height * 0.5;
@@ -76,7 +76,9 @@ public:
     // Make font size proportional to the knob's diameter
     g.setFont(juce::jmin(15.0f, diameter * 0.3f));
     g.drawText(text, dialArea.toNearestInt(), juce::Justification::centred, true);
-    
+    auto label = slider.getName();
+    juce::Rectangle<float> nameArea(rx-diameter*0.5f,ry+radius*1.2f,diameter*2.f,diameter);
+    g.drawText(label, nameArea.toNearestInt(), juce::Justification::centred, true);
   };
 
   juce::Slider::SliderLayout getSliderLayout (juce::Slider& slider) override
