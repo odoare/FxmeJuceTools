@@ -75,6 +75,11 @@ public:
             int writeHeadPos = 0;
         };
 
+    int getFreeSpace() const
+        {
+            return fifoBuffer.getNumSamples() - numSamplesReady;
+        }
+
     //==============================================================================
 
     juce::AudioBuffer<float> fifoBuffer;
