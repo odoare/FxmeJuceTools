@@ -20,7 +20,7 @@ public:
     float rx = centreX - radius;
     float ry = centreY - radius;
     float angle = rotaryStartAngle + (sliderPos * (rotaryEndAngle-rotaryStartAngle));
-    float thickness = diameter/15;
+    float thickness = diameter/12;
 
     juce::PathStrokeType path{thickness, juce::PathStrokeType::JointStyle::curved, juce::PathStrokeType::EndCapStyle::rounded};
 
