@@ -13,6 +13,10 @@
 class FxmeSlider : public juce::Slider
 {
 public:
+    FxmeSlider()
+    {
+        setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    }
     FxmeSlider(juce::AudioProcessorValueTreeState& apvts, 
                const juce::String& paramID, 
                const juce::String& labelText, 
@@ -66,9 +70,14 @@ public:
 
     }
 
+    void setAttachment(juce::AudioProcessorValueTreeState::SliderAttachment* a)
+    {
+        attachment.reset(a);
+    }
+
+
 private:
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment{nullptr};
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FxmeSlider)    
 };
-
