@@ -75,6 +75,11 @@ public:
         attachment.reset(a);
     }
 
+    void setCentralValue(double value)
+    {
+        getProperties().set("centralValue", value);
+    }
+
 
 private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment{nullptr};

@@ -50,24 +50,25 @@ public:
     g.setColour(slider.findColour(juce::Slider::trackColourId));
     juce::Path arc2;
 
-    const bool drawFromCentre = slider.getProperties().getWithDefault ("drawFromCentre", false);
+    float zeroPos = 0.0f; // Default start at min value
 
-    if (drawFromCentre)
+    if (slider.getProperties().contains("centralValue"))
     {
-        // For bipolar sliders like pan, draw from the center position.
-        const float centreAngle = rotaryStartAngle + (rotaryEndAngle - rotaryStartAngle) * 0.5f;
+        double cv = slider.getProperties()["centralValue"];
+        zeroPos = (float)slider.valueToProportionOfLength(cv);
+    }
+    else if (slider.getProperties().getWithDefault ("drawFromCentre", false))
+    {
+        zeroPos = 0.5f;
+    }
 
-        // To ensure the arc is drawn in the correct direction from the center,
-        // we use jmin and jmax to define the start and end angles.
-        arc2.addArc (rx, ry, diameter, diameter,
-                     juce::jmin (angle, centreAngle),
-                     juce::jmax (angle, centreAngle),
-                     true);
-    }
-    else
-    {
-        arc2.addArc(rx, ry, diameter, diameter, rotaryStartAngle, angle, true);
-    }
+    float zeroAngle = rotaryStartAngle + zeroPos * (rotaryEndAngle - rotaryStartAngle);
+
+    arc2.addArc (rx, ry, diameter, diameter,
+                 juce::jmin (angle, zeroAngle),
+                 juce::jmax (angle, zeroAngle),
+                 true);
+
     g.strokePath(arc2, path);
 
     // Draw the slider's value as text in the center
