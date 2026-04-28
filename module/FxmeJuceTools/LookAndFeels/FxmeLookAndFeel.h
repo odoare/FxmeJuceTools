@@ -1,3 +1,5 @@
+#pragma once
+
 #include <JuceHeader.h>
 
 class FxmeLookAndFeel : public juce::LookAndFeel_V4
