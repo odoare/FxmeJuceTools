@@ -80,6 +80,11 @@ public:
         getProperties().set("centralValue", value);
     }
 
+    void setShowLabel(bool shouldShowLabel)
+    {
+        getProperties().set("showLabel", shouldShowLabel);
+    }
+
 
 private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment{nullptr};

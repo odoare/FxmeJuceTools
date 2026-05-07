@@ -6,19 +6,31 @@ class FxmeLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
 
-  void drawRotarySlider(juce::Graphics& g, 
-          int x, int y, 
+  void drawRotarySlider(juce::Graphics& g,
+          int x, int y,
           int width,
-          int height, 
-          float sliderPos, 
-          float rotaryStartAngle, 
-          float rotaryEndAngle, 
+          int height,
+          float sliderPos,
+          float rotaryStartAngle,
+          float rotaryEndAngle,
           juce::Slider& slider) override
   {
-    float diameter = 0.7*juce::jmin(width,height);
-    float radius = diameter * 0.5;
-    float centreX = x + width * 0.5;
-    float centreY = y + height * 0.5;
+    // Optional label drawn just below the knob — opt-in via the "showLabel"
+    // property so mixer knobs (no room) stay unchanged while effect knobs
+    // can display their name compactly.
+    const bool showLabel = slider.getProperties().getWithDefault ("showLabel", false);
+
+    float diameter = 0.7f * juce::jmin ((float) width, (float) height);
+    // Label height scales with the knob so the text stays proportionate; the
+    // (knob + label) cluster is then centred vertically so we don't waste
+    // space below the knob.
+    const float labelHeight = showLabel
+        ? juce::jmin (diameter * 0.32f, (float) height - diameter)
+        : 0.0f;
+    const float clusterHeight = diameter + labelHeight;
+    float radius = diameter * 0.5f;
+    float centreX = (float) x + (float) width * 0.5f;
+    float centreY = (float) y + ((float) height - clusterHeight) * 0.5f + radius;
     float rx = centreX - radius;
     float ry = centreY - radius;
     float angle = rotaryStartAngle + (sliderPos * (rotaryEndAngle-rotaryStartAngle));
@@ -79,9 +91,16 @@ public:
     // Make font size proportional to the knob's diameter
     g.setFont(juce::jmin(15.0f, diameter * 0.3f));
     g.drawText(text, dialArea.toNearestInt(), juce::Justification::centred, true);
-    auto label = slider.getName();
-    juce::Rectangle<float> nameArea(rx-diameter*0.5f,ry+radius*1.2f,diameter*2.f,diameter);
-    g.drawText(label, nameArea.toNearestInt(), juce::Justification::centred, true);
+
+    if (showLabel)
+    {
+        // Sit the label just below the knob; font scales with the knob so the
+        // text grows with the available size.
+        juce::Rectangle<float> nameArea ((float) x, centreY + radius, (float) width, labelHeight);
+        g.setColour (juce::Colours::white.withAlpha (0.85f));
+        g.setFont (juce::jmin (diameter * 0.25f, labelHeight * 0.9f));
+        g.drawText (slider.getName(), nameArea.toNearestInt(), juce::Justification::centred, true);
+    }
   };
 
   juce::Slider::SliderLayout getSliderLayout (juce::Slider& slider) override
