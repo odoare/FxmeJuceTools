@@ -98,7 +98,10 @@ public:
         // text grows with the available size.
         juce::Rectangle<float> nameArea ((float) x, centreY + radius, (float) width, labelHeight);
         g.setColour (juce::Colours::white.withAlpha (0.85f));
-        g.setFont (juce::jmin (diameter * 0.25f, labelHeight * 0.9f));
+        // Cap the label font so it stays readable on large knobs instead of
+        // growing without bound with the diameter.
+        constexpr float maxLabelFontSize = 16.0f;
+        g.setFont (juce::jmin (diameter * 0.25f, labelHeight * 0.9f, maxLabelFontSize));
         g.drawText (slider.getName(), nameArea.toNearestInt(), juce::Justification::centred, true);
     }
   };
