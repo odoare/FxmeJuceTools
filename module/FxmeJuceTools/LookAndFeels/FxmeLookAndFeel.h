@@ -321,7 +321,7 @@ public:
         // Draw the slider's value as text in the center
         auto text = juce::String (slider.getValue(), 2);
         g.setColour(juce::Colours::white.withAlpha(0.7f));
-        g.setFont(juce::jmin(15.0f, height * 0.3f));
+        g.setFont(juce::jmin(18.0f, height * 0.55f));
         g.drawText(text, bounds.toNearestInt(), juce::Justification::centred, true);
 
         // Draw outline
